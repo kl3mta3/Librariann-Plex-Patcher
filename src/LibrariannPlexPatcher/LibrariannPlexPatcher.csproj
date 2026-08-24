@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>LibrariannPlexPatcher</AssemblyName>
+    <RootNamespace>LibrariannPlexPatcher</RootNamespace>
+    <ApplicationIcon>Assets\favicon.ico</ApplicationIcon>
+    <!-- Launches asInvoker (the .NET default) - the visible window never needs admin rights.
+         Only the on-demand relaunch in ElevatedActionRunner requests elevation, and only for the
+         actual patch/restore file writes. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\patch-script-template.txt" LogicalName="LibrariannPlexPatcher.Assets.patch-script-template.txt" />
+    <EmbeddedResource Include="Assets\static\logo-white-64.png" LogicalName="LibrariannPlexPatcher.Assets.static.logo-white-64.png" />
+    <EmbeddedResource Include="Assets\static\logo-gold-64.png" LogicalName="LibrariannPlexPatcher.Assets.static.logo-gold-64.png" />
+    <!-- Build action "Resource" (not EmbeddedResource) so WPF's pack:// URI in MainWindow.xaml's
+         Window.Icon can resolve it directly - separate from the assets above, which are read via
+         Assembly.GetManifestResourceStream instead. -->
+    <Resource Include="Assets\favicon.ico" />
+  </ItemGroup>
+
+</Project>

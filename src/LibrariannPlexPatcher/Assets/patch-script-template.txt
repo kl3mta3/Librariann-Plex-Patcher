@@ -1,0 +1,195 @@
+<script>
+(function() {
+  var LIBRARIANN_URL = '__LIBRARIANN_URL__';
+  var ICON_DEFAULT = '/web/static/logo-white-64.png';
+  var ICON_SELECTED = '/web/static/logo-gold-64.png';
+  var isSelectedClass = null;
+  var previousSelectedWrapper = null;
+
+  // Finds Plex's own layout row live each time - confirmed live: sidebar and main content pane are
+  // both children of one display:flex;flex-direction:row container, with the content pane set to
+  // flex:1 1 auto so it fills 100% of the remaining row width and reflows automatically via plain CSS
+  // whenever the sidebar collapses/expands or the window resizes. Docking our panel into that same
+  // row as a real sibling (instead of a JS-measured fixed-position overlay) means it inherits that
+  // exact reflow behavior for free - no resize listeners, no pixel math, no drift to track.
+  //
+  // contentPane must be found by positively matching Plex's own content-pane class, not by excluding
+  // "whichever sibling isn't the sidebar or our panel" - confirmed live that a collapsed sidebar adds
+  // an extra hidden sibling (a "sidebarUnderlay" element) to the same flex row, which an
+  // exclusion-based search picked up by mistake since it's neither the sidebar nor our panel, and
+  // stopped there without ever reaching the real content pane. Excluding "everything else" is
+  // fragile whenever there can be more than one "everything else"; matching the content pane's own
+  // stable class (confirmed identical in both collapsed and expanded sidebar states) is not.
+  function findLayout() {
+    var navLink = Array.prototype.find.call(document.querySelectorAll('a'), function(a) {
+      var text = (a.textContent || '').trim();
+      return text === 'Home' || text === 'Discover' || text === 'Watchlist';
+    });
+    var sidebar = navLink && navLink.closest('[class*="SourceSidebar-sidebar"]');
+    var flexRow = sidebar && sidebar.parentElement;
+    var contentPane = flexRow && Array.prototype.find.call(flexRow.children, function(c) {
+      return c.className && c.className.indexOf('Page-pageScroller') !== -1;
+    });
+    return {flexRow: flexRow, contentPane: contentPane};
+  }
+
+  // Plex marks whichever sidebar item matches the current route with a build-specific (hash-suffixed)
+  // "isSelected" class - captured once, live, off whichever real item currently has it, rather than
+  // hardcoding a suffix that changes across Plex builds. Our fake #librariann-panel hash never actually
+  // changes Plex's route, so Plex's own router never assigns or clears this class for us; we own that
+  // toggle entirely ourselves, including swapping our own icon between the white (default) and gold
+  // (selected) logo variants to match.
+  function captureIsSelectedClass() {
+    if (isSelectedClass) return isSelectedClass;
+    var selectedWrapper = document.querySelector('[data-testid="sidebarSource"][class*="SourceSidebarLink-isSelected-"]');
+    if (!selectedWrapper) return null;
+    var match = selectedWrapper.className.match(/SourceSidebarLink-isSelected-\S+/);
+    isSelectedClass = match ? match[0] : null;
+    return isSelectedClass;
+  }
+
+  function setOurItemActive(active) {
+    var ourItem = document.getElementById('librariann-nav-item');
+    if (!ourItem) return;
+
+    var icon = ourItem.querySelector('img');
+    if (icon) icon.src = active ? ICON_SELECTED : ICON_DEFAULT;
+
+    var cls = captureIsSelectedClass();
+    if (!cls) return;
+
+    if (active) {
+      var current = document.querySelector('[data-testid="sidebarSource"][class*="' + cls + '"]');
+      if (current && current !== ourItem) {
+        current.classList.remove(cls);
+        previousSelectedWrapper = current;
+      }
+      ourItem.classList.add(cls);
+    } else {
+      ourItem.classList.remove(cls);
+      // Only restore whichever item we stole "selected" from if nothing else already has it - a
+      // close triggered by a real Plex navigation (clicking another sidebar item) means Plex's own
+      // router already assigned it to the new destination on its own, and restoring the old one here
+      // would incorrectly un-select whatever the user actually just navigated to.
+      var anyoneElseSelected = document.querySelector('[data-testid="sidebarSource"][class*="' + cls + '"]');
+      if (!anyoneElseSelected && previousSelectedWrapper && document.contains(previousSelectedWrapper)) {
+        previousSelectedWrapper.classList.add(cls);
+      }
+      previousSelectedWrapper = null;
+    }
+  }
+
+  function closeLibrariannPanel() {
+    var panel = document.getElementById('librariann-panel');
+    if (panel) panel.style.display = 'none';
+    var layout = findLayout();
+    if (layout.contentPane) layout.contentPane.style.removeProperty('display');
+    setOurItemActive(false);
+  }
+
+  // Opens Librariann's dedicated chrome-less /embed route as a real sibling of Plex's own content
+  // pane in Plex's own flex row (see findLayout above) rather than an overlay - Plex's own content is
+  // hidden (not removed) while open, and restored on close. Requires LIBRARIANN_URL's origin to be
+  // listed in Librariann's own EmbeddingOrigins setting (config/appsettings.json) - otherwise
+  // Librariann's own clickjacking protection blocks the frame and the panel shows blank. First load in
+  // this panel will likely need its own login even if already logged into Librariann elsewhere -
+  // browsers partition storage for a cross-site iframe like this one separately from a normal
+  // same-site tab.
+  function openLibrariannPanel() {
+    var layout = findLayout();
+    if (!layout.flexRow) return;
+    if (layout.contentPane) layout.contentPane.style.display = 'none';
+    setOurItemActive(true);
+
+    var panel = document.getElementById('librariann-panel');
+    if (panel) {
+      panel.style.display = 'block';
+      return;
+    }
+
+    panel = document.createElement('div');
+    panel.id = 'librariann-panel';
+    panel.style.cssText = 'flex:1 1 auto;position:relative;overflow:hidden;background:#191a1c;';
+
+    var iframe = document.createElement('iframe');
+    // ?nav=1 asks Librariann to keep its own side nav and top header in this embed (added specifically
+    // for this docked-panel case) so the panel is actually navigable/searchable, not just one static page.
+    iframe.src = LIBRARIANN_URL + '/embed?nav=1';
+    iframe.title = 'Librariann';
+    iframe.style.cssText = 'width:100%;height:100%;border:none;display:block;';
+
+    // No explicit close control by design - navigating to any other Plex destination closes it via
+    // the hashchange listener below.
+    panel.appendChild(iframe);
+    layout.flexRow.appendChild(panel);
+
+    // Close on real Plex navigation (Plex Web is a hash-router, so clicking any other sidebar item or
+    // top-bar destination changes location.hash) rather than on an outside click, which dismissed it
+    // too eagerly for something meant to sit alongside Plex, not interrupt it. Our own nav item's
+    // click is preventDefault()-ed below, so it never fires this itself.
+    window.addEventListener('hashchange', closeLibrariannPanel);
+  }
+
+  // Clones an existing sidebar item (matched by its visible text, not by Plex's hashed CSS-module
+  // class names, which are NOT stable across Plex builds) so the new entry automatically inherits
+  // correct styling/hover/active states with zero hardcoded CSS of our own.
+  function tryInject() {
+    if (document.getElementById('librariann-nav-item')) return true;
+
+    var templateLink = Array.prototype.find.call(document.querySelectorAll('a'), function(a) {
+      var text = (a.textContent || '').trim();
+      return text === 'Home' || text === 'Discover' || text === 'Watchlist';
+    });
+    if (!templateLink) return false;
+
+    var templateItem = templateLink.closest('div[data-testid="sidebarSource"]') || templateLink.parentElement.parentElement;
+    var container = templateItem && templateItem.parentElement;
+    if (!container) return false;
+
+    var clone = templateItem.cloneNode(true);
+    clone.id = 'librariann-nav-item';
+
+    var link = clone.querySelector('a');
+    link.removeAttribute('data-uid');
+    link.href = '#librariann-panel';
+    link.title = 'Librariann';
+    link.onclick = function(e) {
+      e.preventDefault();
+      openLibrariannPanel();
+    };
+
+    var titleDiv = clone.querySelector('[class*="SourceSidebarLink-title"]');
+    if (titleDiv) titleDiv.textContent = 'Librariann';
+
+    // Real Librariann logo, sized to match Plex's own sidebar icons exactly (confirmed live:
+    // 24x24 rendered, in a 56x40 icon container) - swapped in for the synthesized placeholder icon.
+    // Starts white/default; setOurItemActive() swaps it to the gold variant while the panel is open.
+    var svg = clone.querySelector('svg');
+    if (svg) {
+      var img = document.createElement('img');
+      img.src = ICON_DEFAULT;
+      img.alt = 'Librariann';
+      img.style.cssText = 'width:24px;height:24px;object-fit:contain;';
+      svg.replaceWith(img);
+    }
+
+    var overflow = clone.querySelector('[data-testid="sidebarSourceOverflow"]');
+    if (overflow && overflow.parentElement) overflow.parentElement.remove();
+
+    container.appendChild(clone);
+    return true;
+  }
+
+  // Keeps watching indefinitely rather than stopping after the first success. Confirmed live: Plex
+  // rebuilds the sidebar's item list wholesale when switching between its normal view and the
+  // "More"/"Pinned" flyout - our injected item vanished on switching and did NOT come back on
+  // switching back, because the container it was appended to had been torn down and replaced. This
+  // self-heals every time Plex redraws that list, in either direction, instead of only handling the
+  // very first render.
+  tryInject();
+  var observer = new MutationObserver(function() {
+    tryInject();
+  });
+  observer.observe(document.body, {childList: true, subtree: true});
+})();
+</script>

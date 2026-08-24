@@ -1,0 +1,78 @@
+<Window x:Class="LibrariannPlexPatcher.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Librariann Plex Patcher" Height="640" Width="640" MinHeight="480" MinWidth="560"
+        Icon="Assets/favicon.ico"
+        Background="{StaticResource BodyBgBrush}"
+        FontFamily="Segoe UI"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResize">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header - dark card with the same primary-green accent border Librariann's own login card uses -->
+        <Border Grid.Row="0" Background="{StaticResource CardBgBrush}"
+                BorderBrush="{StaticResource PrimaryBrush}" BorderThickness="0,0,0,3" Padding="24,18">
+            <StackPanel Orientation="Horizontal">
+                <Image x:Name="HeaderLogoImage" Width="32" Height="32" Margin="0,0,12,0" />
+                <StackPanel VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Librariann" FontSize="20" FontWeight="Bold" Foreground="{StaticResource TextBrush}" />
+                        <TextBlock Text=" Plex Patcher" FontSize="20" FontWeight="Light" Foreground="{StaticResource MutedTextBrush}" />
+                    </StackPanel>
+                    <TextBlock Text="Adds a Librariann entry to Plex Web's sidebar" Style="{StaticResource MutedTextStyle}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="24">
+
+            <TextBlock Text="Plex Media Server Folder" Style="{StaticResource LabelTextStyle}" />
+            <Grid Margin="0,0,0,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="PlexFolderTextBox" Grid.Column="0" Style="{StaticResource InputTextBoxStyle}" Margin="0,0,8,0" />
+                <Button x:Name="BrowseButton" Grid.Column="1" Content="Browse..." Style="{StaticResource SecondaryButtonStyle}" Click="BrowseButton_Click" />
+            </Grid>
+            <TextBlock Text="The main Plex Media Server install folder - its bundled web client's index.html is found automatically underneath it, wherever it lives."
+                       Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" Margin="0,0,0,16" />
+
+            <TextBlock Text="Librariann Server Address" Style="{StaticResource LabelTextStyle}" />
+            <Grid Margin="0,0,0,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="LibrariannAddressTextBox" Grid.Column="0" Style="{StaticResource InputTextBoxStyle}" Margin="0,0,8,0" />
+                <Button x:Name="TestConnectionButton" Grid.Column="1" Content="Test Connection" Style="{StaticResource SecondaryButtonStyle}" Click="TestConnectionButton_Click" />
+            </Grid>
+            <TextBlock x:Name="ConnectionStatusText" Text=" " Style="{StaticResource MutedTextStyle}" Margin="0,0,0,4" />
+            <TextBlock Text="An IP:port (127.0.0.1:5000), a domain (librariann.example.com), or a full URL."
+                       Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" Margin="0,0,0,16" />
+
+            <Border Background="{StaticResource CardBgBrush}" CornerRadius="4" Padding="16" Margin="0,4,0,16">
+                <StackPanel>
+                    <TextBlock Text="Backup &amp; Patch Status" Style="{StaticResource LabelTextStyle}" />
+                    <TextBlock x:Name="BackupPathText" Text="No backup yet." Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" Margin="0,0,0,2" />
+                    <TextBlock x:Name="LastBackupText" Text=" " Style="{StaticResource MutedTextStyle}" Margin="0,0,0,2" />
+                    <TextBlock x:Name="LastPatchText" Text="Not currently patched." Style="{StaticResource MutedTextStyle}" />
+                </StackPanel>
+            </Border>
+
+            <TextBlock x:Name="ActionStatusText" Text=" " Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" Margin="0,0,0,8" />
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="RestoreButton" Content="Restore Original" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,8,0" Click="RestoreButton_Click" IsEnabled="False" />
+                <Button x:Name="PatchButton" Content="Patch" Style="{StaticResource PrimaryButtonStyle}" Click="PatchButton_Click" />
+            </StackPanel>
+
+        </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>

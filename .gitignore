@@ -1,0 +1,30 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+publish/
+
+# Visual Studio / Rider / VS Code
+.vs/
+.idea/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider
+*.DotSettings.user
+
+# NuGet
+*.nupkg
+**/packages/*
+!**/packages/build/
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Local test/backup artifacts (patcher's own runtime state lives in %AppData%, not the repo)
+*.bak
