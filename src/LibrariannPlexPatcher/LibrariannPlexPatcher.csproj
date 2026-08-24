@@ -12,6 +12,18 @@
     <!-- Launches asInvoker (the .NET default) - the visible window never needs admin rights.
          Only the on-demand relaunch in ElevatedActionRunner requests elevation, and only for the
          actual patch/restore file writes. -->
+
+    <!-- Self-contained single-file publish: bundles the whole .NET runtime into one .exe so end users
+         don't need .NET installed at all. Only affects `dotnet publish`, never `dotnet build`/F5
+         debugging, so it's safe to set unconditionally here rather than needing a separate publish
+         profile. Windows-only and win-x64-only on purpose - this tool only ever patches a Windows Plex
+         install, there's no cross-platform case to support. WPF isn't trim-safe, so PublishTrimmed is
+         deliberately left off (would break at runtime, not just bloat the exe). -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
   </PropertyGroup>
 
   <ItemGroup>
